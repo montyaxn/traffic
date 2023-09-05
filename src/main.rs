@@ -36,19 +36,19 @@ fn main() -> std::io::Result<()> {
             for j in 0..imgy {
                 let pixel = imgbuf.get_pixel_mut(j, i);
                 *pixel = match model.traffic[i as usize][j as usize] {
-                    Tstatus::Blue => image::Rgba([78, 104, 150, 255]),
-                    Tstatus::Red => {
-                        if 0 < i
-                            && i < imgx - 1
-                            && model.traffic[(i + 1) as usize][j as usize] == Tstatus::Blue
-                            && model.traffic[(i - 1) as usize][j as usize] == Tstatus::Blue
+                    Tstatus::Blue => {
+                        if 0 < j
+                            && j < imgy - 1
+                            && model.traffic[i as usize][(j+1) as usize] == Tstatus::Red
+                            && model.traffic[i as usize][(j-1) as usize] == Tstatus::Red
                             && rng.gen_bool(0.3)
                         {
                             image::Rgba([255, 200, 230, 255])
                         } else {
-                            image::Rgba([184, 120, 139, 255])
+                            image::Rgba([78, 104, 150, 255])
                         }
                     }
+                    Tstatus::Red => image::Rgba([184, 120, 139, 255]),
                     _ => image::Rgba([255, 255, 255, 0]),
                 }
             }
