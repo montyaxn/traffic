@@ -273,26 +273,19 @@ fn randomize(model: &mut Model, sand: usize) {
 
             // delete blue cars at even numbered colmns and red cars at even numbered rows
             for i in 0..s {
-                if (s - 1 - i) % 2 == 0 && model.odd_was_odd {
-                    match model.traffic[CAR_NUM - 1 - i][s - 1 - i] {
-                        Tstatus::Blue => {
-                            model.traffic[CAR_NUM - 1 - i][s - 1 - i] = Tstatus::None;
-                        }
-                        Tstatus::Red => {
-                            model.traffic[CAR_NUM - 1 - i][s - 1 - i] = Tstatus::None;
-                        }
-                        _ => (),
-                    };
-                } else if (s - i) % 2 == 0 && !model.odd_was_odd {
-                    match model.traffic[CAR_NUM - 1 - i][s - 1 - i] {
-                        Tstatus::Blue => {
-                            model.traffic[CAR_NUM - 1 - i][s - 1 - i] = Tstatus::None;
-                        }
-                        Tstatus::Red => {
-                            model.traffic[CAR_NUM - 1 - i][s - 1 - i] = Tstatus::None;
-                        }
-                        _ => (),
-                    };
+                if model.odd_was_odd {
+                    if (CAR_NUM - 1 - i) % 2 == 0 && model.traffic[CAR_NUM - 1 - i][s - 1 - i] == Tstatus::Blue{
+                        model.traffic[CAR_NUM - 1 - i][s - 1 - i] = Tstatus::None;
+                    }else if (s - 1 - i) % 2 == 0 && model.traffic[CAR_NUM - 1 - i][s - 1 - i] == Tstatus::Red{
+                        model.traffic[CAR_NUM - 1 - i][s - 1 - i] = Tstatus::None;
+                    }
+                    
+                } else{
+                    if (CAR_NUM - i) % 2 == 0 && model.traffic[CAR_NUM - 1 - i][s - 1 - i] == Tstatus::Blue{
+                        model.traffic[CAR_NUM - 1 - i][s - 1 - i] = Tstatus::None;
+                    }else if (s - i) % 2 == 0 && model.traffic[CAR_NUM - 1 - i][s - 1 - i] == Tstatus::Red{
+                        model.traffic[CAR_NUM - 1 - i][s - 1 - i] = Tstatus::None;
+                    }
                 }
             }
         }
