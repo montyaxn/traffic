@@ -41,7 +41,7 @@ fn main() -> std::io::Result<()> {
                             && j < imgy - 1
                             && model.traffic[i as usize][(j+1) as usize] == Tstatus::Red
                             && model.traffic[i as usize][(j-1) as usize] == Tstatus::Red
-                            && rng.gen_bool(0.3)
+                            && rng.gen_bool(0.2)
                         {
                             image::Rgba([255, 200, 230, 255])
                         } else {
@@ -261,7 +261,7 @@ fn rotate(model: &mut Model) {
 fn randomize(model: &mut Model, sand: usize) {
     let mut rng = rand::thread_rng();
     for s in 0..sand {
-        if rng.gen_bool(0.04) {
+        if rng.gen_bool(0.025) {
             for i in 0..s {
                 let r: f64 = rng.gen();
                 if r < (DENSITY) {
