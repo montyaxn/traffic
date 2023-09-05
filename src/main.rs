@@ -5,7 +5,9 @@ use image::codecs::gif::GifEncoder;
 
 const DENSITY: f64 = 0.5; // can not be bigger than 0.5
 const CAR_NUM: usize = 500; // must be even number
-const FRAME_NUM: usize = 3000;
+const SAND_MAX: usize = 500; // must be even number too
+const TIDE_FREQUENCY: i32 = 300;
+const FRAME_NUM: usize = 1000;
 
 // traffic status
 #[derive(Clone, Copy, PartialEq)]
@@ -21,6 +23,8 @@ fn main() -> std::io::Result<()> {
     let imgy = CAR_NUM as u32;
 
     // init model
+    let mut rng = rand::thread_rng();
+    let mut counter: i32 = 0;
     let mut model = model();
 
     let mut frames = Vec::new();
@@ -33,7 +37,18 @@ fn main() -> std::io::Result<()> {
                 let pixel = imgbuf.get_pixel_mut(j, i);
                 *pixel = match model.traffic[i as usize][j as usize] {
                     Tstatus::Blue => image::Rgba([78, 104, 150, 255]),
-                    Tstatus::Red => image::Rgba([184, 120, 139, 255]),
+                    Tstatus::Red => {
+                        if 0 < i
+                            && i < imgx - 1
+                            && model.traffic[(i + 1) as usize][j as usize] == Tstatus::Blue
+                            && model.traffic[(i - 1) as usize][j as usize] == Tstatus::Blue
+                            && rng.gen_bool(0.3)
+                        {
+                            image::Rgba([255, 200, 230, 255])
+                        } else {
+                            image::Rgba([184, 120, 139, 255])
+                        }
+                    }
                     _ => image::Rgba([255, 255, 255, 0]),
                 }
             }
@@ -45,7 +60,21 @@ fn main() -> std::io::Result<()> {
         frames.push(frame);
 
         // update model
-        update(&mut model);
+        simple_update(&mut model);
+
+        // rotate occasionally
+        if counter % 5 == 0 {
+            rotate(&mut model);
+        };
+        let p = ((((counter + TIDE_FREQUENCY) % (TIDE_FREQUENCY * 2)) - TIDE_FREQUENCY).abs() ^ 2)
+            as f64
+            / (TIDE_FREQUENCY ^ 2) as f64;
+        if rng.gen_bool(1. / 10. + p * 1. / 5.) {
+            randomize(&mut model, (SAND_MAX as f64 * p) as usize);
+            print!("shuffled");
+        };
+        counter += 1;
+
         println!("{}/{}", index + 1, FRAME_NUM);
     }
 
@@ -63,6 +92,7 @@ struct Model {
     // blue_standby: [u8; CAR_NUM],
     // red_standby: [u8; CAR_NUM],
     blue_turn: bool,
+    odd_was_odd: bool,
 }
 
 // initializer for model
@@ -83,7 +113,7 @@ fn model() -> Model {
             }
         }
     }
-    // delete blue cars at odd numbered colmns and red cars at odd numbered rows
+    // delete blue cars at even numbered colmns and red cars at even numbered rows
     for i in 0..CAR_NUM {
         for j in 0..CAR_NUM {
             if (i % 2) == 0 && traffic[i][j] == Tstatus::Blue {
@@ -99,11 +129,12 @@ fn model() -> Model {
         // blue_standby: [0; CAR_NUM],
         // red_standby: [0; CAR_NUM],
         blue_turn: true,
+        odd_was_odd: true,
     }
 }
 
 // simple updater
-fn update(model: &mut Model) {
+fn simple_update(model: &mut Model) {
     if model.blue_turn {
         model.blue_turn = false;
 
@@ -177,6 +208,91 @@ fn update(model: &mut Model) {
                         model.traffic[i][j] = Tstatus::Red;
                     }
                     _ => (),
+                }
+            }
+        }
+    }
+}
+
+// rotate !
+fn rotate(model: &mut Model) {
+    let clone = model.traffic.clone();
+    for i in 1..CAR_NUM {
+        for j in 0..CAR_NUM - 1 {
+            model.traffic[i][j] = clone[i - 1][j + 1];
+        }
+    }
+    for i in 1..CAR_NUM {
+        model.traffic[i][CAR_NUM - 1] = clone[i - 1][0];
+    }
+    for j in 0..CAR_NUM - 1 {
+        model.traffic[0][j] = clone[CAR_NUM - 1][j + 1];
+    }
+    model.traffic[0][CAR_NUM - 1] = clone[CAR_NUM - 1][0];
+
+    // // some randomeness
+    // let mut rng = rand::thread_rng();
+    // let speed = rng.gen_range(1..=2) * 2 + 1;
+    // let target_id = rng.gen_range(0..CAR_NUM*2-1);
+    // let thickness : i32 = rng.gen_range(3..6);
+    // for i in -thickness..=thickness {
+    //     let id = ((target_id as i32  + i)%(CAR_NUM*2-1)as i32)as usize;
+    //     if id+1<=speed || 2*CAR_NUM-1<=id+speed{}
+    //     else if id <= CAR_NUM-1{
+    //         for n in 0..id+1-speed{
+    //             model.traffic[id-n][n] = clone[id-n-speed][n+speed];
+    //         }
+    //         for n in 0..speed{
+    //             model.traffic[speed-1-n][1+id-speed+n] = clone[id-n][n];
+    //         }
+    //     }else{
+    //         for n in 0..2*CAR_NUM-1-id-speed{
+    //             model.traffic[CAR_NUM-n-1][id-CAR_NUM+1+n] = clone[CAR_NUM-n-1-speed][id-CAR_NUM+1+n+speed];
+    //         }
+    //         for n in 0..speed{
+    //             model.traffic[CAR_NUM-(2*CAR_NUM-id-1-speed)-n-1][id-CAR_NUM+1+(2*CAR_NUM-id-1-speed)+n] = clone[CAR_NUM-n-1][id-CAR_NUM+1+n];
+    //         }
+    //     }
+    // }
+
+    model.odd_was_odd = !model.odd_was_odd;
+}
+
+fn randomize(model: &mut Model, sand: usize) {
+    let mut rng = rand::thread_rng();
+    for s in 0..sand {
+        if rng.gen_bool(0.04) {
+            for i in 0..s {
+                let r: f64 = rng.gen();
+                if r < (DENSITY) {
+                    model.traffic[CAR_NUM - 1 - i][s - 1 - i] = Tstatus::Blue;
+                } else if r < (DENSITY * 2.) {
+                    model.traffic[CAR_NUM - 1 - i][s - 1 - i] = Tstatus::Red;
+                }
+            }
+
+            // delete blue cars at even numbered colmns and red cars at even numbered rows
+            for i in 0..s {
+                if (s - 1 - i) % 2 == 0 && model.odd_was_odd {
+                    match model.traffic[CAR_NUM - 1 - i][s - 1 - i] {
+                        Tstatus::Blue => {
+                            model.traffic[CAR_NUM - 1 - i][s - 1 - i] = Tstatus::None;
+                        }
+                        Tstatus::Red => {
+                            model.traffic[CAR_NUM - 1 - i][s - 1 - i] = Tstatus::None;
+                        }
+                        _ => (),
+                    };
+                } else if (s - i) % 2 == 0 && !model.odd_was_odd {
+                    match model.traffic[CAR_NUM - 1 - i][s - 1 - i] {
+                        Tstatus::Blue => {
+                            model.traffic[CAR_NUM - 1 - i][s - 1 - i] = Tstatus::None;
+                        }
+                        Tstatus::Red => {
+                            model.traffic[CAR_NUM - 1 - i][s - 1 - i] = Tstatus::None;
+                        }
+                        _ => (),
+                    };
                 }
             }
         }
