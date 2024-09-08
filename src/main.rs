@@ -7,7 +7,7 @@ const DENSITY: f64 = 0.5; // can not be bigger than 0.5
 const CAR_NUM: usize = 500; // must be even number
 const SAND_MAX: usize = 500; // must be even number too
 const TIDE_FREQUENCY: i32 = 300;
-const FRAME_NUM: usize = 1000;
+const FRAME_NUM: usize = 3000;
 
 // traffic status
 #[derive(Clone, Copy, PartialEq)]
